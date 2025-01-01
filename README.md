@@ -1,195 +1,290 @@
-# Selenium Quick Lookup Repository
+# Selenium Advanced Testing Framework
 
-Welcome to the Selenium Quick Lookup Repository! This repository is designed to help Automation Test Engineers and candidates by providing a quick reference to Selenium concepts, commands, design patterns, error handling, and best practices.
-
----
-
-## Table of Contents
-
-1. [Introduction](#introduction)
-2. [Architecture](#architecture)
-3. [Daily Use Commands](#daily-use-commands)
-4. [Cheat Sheet](#cheat-sheet)
-5. [Design Patterns](#design-patterns)
-6. [Error Handling](#error-handling)
-7. [Best Practices](#best-practices)
-8. [Contributing](#contributing)
+This repository demonstrates a fully functional Selenium testing framework with advanced features such as parallel test execution, Selenium Grid setup, retry mechanism, logging, centralized error handling, and Allure reporting.
 
 ---
 
-## Introduction
-Selenium is a powerful tool for automating web browsers. This repository serves as a quick reference guide to help users:
-
-- Execute daily tasks efficiently.
-- Understand Selenium's architecture.
-- Apply advanced design patterns.
-- Handle errors effectively.
-- Prepare for interviews and real-world challenges.
-
----
-
-## Architecture
-
-Selenium follows a client-server architecture. Here’s a breakdown:
-
-- **Client Libraries:** Provide bindings for various programming languages (e.g., Java, Python, C#).
-- **JSON Wire Protocol:** Acts as a bridge for communication between the client and server.
-- **Selenium WebDriver:** Automates browser actions using native browser APIs.
-- **Browsers:** Supported browsers include Chrome, Firefox, Edge, Safari, and others.
-
-### Diagram
+## Folder Structure
 ```plaintext
-Client Code -> Selenium WebDriver -> JSON Wire Protocol -> Browser Drivers -> Browsers
+selenium-framework/
+|-- src/
+|   |-- main/
+|   |   |-- java/
+|   |   |   |-- base/
+|   |   |   |   |-- BaseTest.java
+|   |   |   |-- pages/
+|   |   |   |   |-- LoginPage.java
+|   |   |   |   |-- LandingPage.java
+|   |   |   |-- utilities/
+|   |   |       |-- ExcelUtils.java
+|   |   |       |-- ScreenshotUtils.java
+|   |   |       |-- LoggerUtils.java
+|   |-- test/
+|       |-- java/
+|       |   |-- tests/
+|       |       |-- LoginTests.java
+|       |       |-- LandingPageTests.java
+|       |       |-- DataDrivenTests.java
+|-- resources/
+|   |-- testdata/
+|       |-- credentials.xlsx
+|-- allure-results/
 ```
 
 ---
 
-## Daily Use Commands
-Here are commonly used Selenium commands categorized for quick reference:
+## Implementation
 
-### Browser Commands
+### Base Test
+**BaseTest.java**
 ```java
-WebDriver driver = new ChromeDriver();
-driver.get("https://example.com"); // Open URL
-driver.quit(); // Close browser and end session
-driver.close(); // Close current browser window
+package base;
+
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.edge.EdgeDriver;
+import org.openqa.selenium.firefox.FirefoxDriver;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Parameters;
+import utilities.LoggerUtils;
+import utilities.ScreenshotUtils;
+
+public class BaseTest {
+    protected WebDriver driver;
+
+    @Parameters("browser")
+    @BeforeClass
+    public void setup(String browser) {
+        LoggerUtils.logInfo("Setting up WebDriver for browser: " + browser);
+        switch (browser.toLowerCase()) {
+            case "chrome":
+                driver = new ChromeDriver();
+                break;
+            case "firefox":
+                driver = new FirefoxDriver();
+                break;
+            case "edge":
+                driver = new EdgeDriver();
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported browser: " + browser);
+        }
+        driver.manage().window().maximize();
+    }
+
+    @BeforeMethod
+    public void navigateToBaseURL() {
+        LoggerUtils.logInfo("Navigating to the base URL.");
+        driver.get("https://example.com");
+    }
+
+    @AfterClass
+    public void teardown() {
+        LoggerUtils.logInfo("Closing WebDriver.");
+        if (driver != null) {
+            driver.quit();
+        }
+    }
+}
 ```
 
-### Locators
+### Page Object Model
+**LoginPage.java**
 ```java
-driver.findElement(By.id("elementId"));
-driver.findElement(By.name("elementName"));
-driver.findElement(By.xpath("//tag[@attribute='value']"));
-driver.findElement(By.cssSelector("#elementId"));
-driver.findElements(By.tagName("tagName"));
-```
+package pages;
 
-### Actions
-```java
-driver.findElement(By.id("button")).click(); // Click action
-driver.findElement(By.id("textBox")).sendKeys("Input text"); // Enter text
-String text = driver.findElement(By.id("label")).getText(); // Get text
-```
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
 
-### Waits
-```java
-WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("elementId")));
-```
-
----
-
-## Cheat Sheet
-### Locators Cheat Sheet
-| Locator Type      | Example                                 |
-|-------------------|-----------------------------------------|
-| ID               | By.id("elementId")                     |
-| Name             | By.name("elementName")                 |
-| XPath            | By.xpath("//tag[@attribute='value']")  |
-| CSS Selector     | By.cssSelector("#elementId")           |
-| Tag Name         | By.tagName("tagName")                  |
-| Class Name       | By.className("className")              |
-
-### Browser Commands Cheat Sheet
-| Command          | Description                     |
-|-------------------|---------------------------------|
-| driver.get(url)  | Open a URL                     |
-| driver.close()   | Close the current window       |
-| driver.quit()    | Quit the driver session        |
-
-### Waits Cheat Sheet
-| Wait Type         | Example                                    |
-|-------------------|--------------------------------------------|
-| Implicit Wait    | driver.manage().timeouts().implicitlyWait()|
-| Explicit Wait    | WebDriverWait + ExpectedConditions         |
-
----
-
-## Design Patterns
-### Page Object Model (POM)
-Encourages modular and maintainable test automation by separating page-specific logic.
-
-#### Example:
-```java
 public class LoginPage {
-    WebDriver driver;
+    private WebDriver driver;
 
-    By username = By.id("username");
-    By password = By.id("password");
-    By loginButton = By.id("loginButton");
+    private By usernameField = By.id("username");
+    private By passwordField = By.id("password");
+    private By loginButton = By.id("loginButton");
 
     public LoginPage(WebDriver driver) {
         this.driver = driver;
     }
 
-    public void login(String user, String pass) {
-        driver.findElement(username).sendKeys(user);
-        driver.findElement(password).sendKeys(pass);
+    public void enterUsername(String username) {
+        driver.findElement(usernameField).sendKeys(username);
+    }
+
+    public void enterPassword(String password) {
+        driver.findElement(passwordField).sendKeys(password);
+    }
+
+    public void clickLogin() {
         driver.findElement(loginButton).click();
     }
 }
 ```
 
-### Singleton Pattern
-Ensures a single instance of WebDriver.
-
-#### Example:
+**LandingPage.java**
 ```java
-public class WebDriverSingleton {
-    private static WebDriver driver;
+package pages;
 
-    private WebDriverSingleton() {}
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
 
-    public static WebDriver getDriver() {
-        if (driver == null) {
-            driver = new ChromeDriver();
-        }
-        return driver;
+public class LandingPage {
+    private WebDriver driver;
+
+    private By welcomeMessage = By.id("welcomeMessage");
+
+    public LandingPage(WebDriver driver) {
+        this.driver = driver;
+    }
+
+    public String getWelcomeMessage() {
+        return driver.findElement(welcomeMessage).getText();
     }
 }
 ```
 
----
-
-## Error Handling
-### Common Exceptions
-1. **NoSuchElementException:** Locator is incorrect or element is not present.
-2. **StaleElementReferenceException:** Element is no longer attached to the DOM.
-3. **TimeoutException:** Element did not load within the specified wait time.
-
-### Handling Strategies
-- Use **Explicit Waits** for dynamic elements.
-- Validate element existence before interacting.
-- Catch exceptions to prevent abrupt failures.
-
-#### Example:
+### Tests
+**LoginTests.java**
 ```java
-try {
-    WebElement element = driver.findElement(By.id("elementId"));
-    element.click();
-} catch (NoSuchElementException e) {
-    System.out.println("Element not found: " + e.getMessage());
+package tests;
+
+import base.BaseTest;
+import org.testng.Assert;
+import org.testng.annotations.Test;
+import pages.LoginPage;
+import pages.LandingPage;
+
+public class LoginTests extends BaseTest {
+    @Test
+    public void validLoginTest() {
+        LoginPage loginPage = new LoginPage(driver);
+        loginPage.enterUsername("testuser");
+        loginPage.enterPassword("password");
+        loginPage.clickLogin();
+
+        LandingPage landingPage = new LandingPage(driver);
+        Assert.assertEquals(landingPage.getWelcomeMessage(), "Welcome, testuser!");
+    }
 }
 ```
 
+**DataDrivenTests.java**
+```java
+package tests;
+
+import base.BaseTest;
+import org.testng.annotations.DataProvider;
+import org.testng.annotations.Test;
+import pages.LoginPage;
+import utilities.ExcelUtils;
+
+public class DataDrivenTests extends BaseTest {
+    @DataProvider(name = "loginData")
+    public Object[][] loginData() {
+        return ExcelUtils.readExcelData("resources/testdata/credentials.xlsx");
+    }
+
+    @Test(dataProvider = "loginData")
+    public void loginWithDataProvider(String username, String password) {
+        LoginPage loginPage = new LoginPage(driver);
+        loginPage.enterUsername(username);
+        loginPage.enterPassword(password);
+        loginPage.clickLogin();
+    }
+}
+```
+
+### Selenium Grid Setup
+Set up Selenium Grid for parallel execution on multiple platforms:
+1. Start the Selenium Hub:
+   ```bash
+   java -jar selenium-server-standalone.jar hub
+   ```
+2. Register Nodes for different browsers:
+   ```bash
+   java -jar selenium-server-standalone.jar node
+   ```
+
+Update the BaseTest to connect to the Selenium Grid:
+```java
+URL gridUrl = new URL("http://localhost:4444/wd/hub");
+driver = new RemoteWebDriver(gridUrl, capabilities);
+```
+
+### Utilities
+**ScreenshotUtils.java**
+```java
+package utilities;
+
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TakesScreenshot;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.io.FileHandler;
+import java.io.File;
+
+public class ScreenshotUtils {
+    public static void takeScreenshot(WebDriver driver, String fileName) {
+        try {
+            File screenshot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.FILE);
+            FileHandler.copy(screenshot, new File("screenshots/" + fileName + ".png"));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+**LoggerUtils.java**
+```java
+package utilities;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+public class LoggerUtils {
+    private static final Logger logger = LogManager.getLogger(LoggerUtils.class);
+
+    public static void logInfo(String message) {
+        logger.info(message);
+    }
+
+    public static void logError(String message) {
+        logger.error(message);
+    }
+}
+```
+
+### Retry Mechanism
+Implement a retry mechanism using TestNG:
+```java
+import org.testng.IRetryAnalyzer;
+import org.testng.ITestResult;
+
+public class RetryAnalyzer implements IRetryAnalyzer {
+    private int retryCount = 0;
+    private static final int maxRetryCount = 3;
+
+    @Override
+    public boolean retry(ITestResult result) {
+        if (retryCount < maxRetryCount) {
+            retryCount++;
+            return true;
+        }
+        return false;
+    }
+}
+```
+
+### Reporting
+Integrate Allure Reporting:
+1. Add Allure dependencies in the `pom.xml`.
+2. Generate reports with:
+   ```bash
+   allure serve allure-results
+   ```
+
 ---
 
-## Best Practices
-1. Use explicit waits instead of thread.sleep().
-2. Follow the Page Object Model for scalability.
-3. Avoid hardcoding locators; use a centralized locator file.
-4. Close or quit WebDriver sessions to release resources.
-5. Write meaningful test case names and assertions.
-
----
-
-## Contributing
-We welcome contributions! Feel free to submit pull requests, report issues, or suggest improvements.
-
-1. Fork the repository.
-2. Create a feature branch.
-3. Submit a pull request with your changes.
-
----
-
-Happy Testing! 🚀
+This comprehensive framework covers parallel testing, Grid setup, data-driven testing, retry mechanism, and reporting. Let me know if further refinement is needed!
